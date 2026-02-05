@@ -239,80 +239,81 @@ elif app_mode == "📈 Model Comparison":
 elif app_mode == "🎯 Make Predictions":
     st.header("Make Predictions on New Data")
     
-    models, scaler = load_models()
+    st.info("💡 This section demonstrates how predictions would work with trained models. View model performance in the 'Model Comparison' section.")
     
-    if len(models) > 0 and scaler is not None:
-        df = load_and_prepare_data()
+    df = load_and_prepare_data()
+    
+    if df is not None:
+        st.subheader("Input Features for Prediction")
+        st.write("Adjust the feature values below to see how they would be used for predictions:")
         
-        if df is not None:
-            st.subheader("Input Features for Prediction")
-            st.info("Adjust the feature values below to make predictions with all trained models")
+        # Create input fields for numerical features only
+        numerical_features = df.select_dtypes(include=[np.number]).columns.tolist()
+        
+        # Remove target column if exists
+        if 'Burn_Rate' in numerical_features:
+            numerical_features.remove('Burn_Rate')
+        
+        feature_inputs = {}
+        
+        # Create dynamic input fields
+        cols = st.columns(3)
+        for idx, feature in enumerate(numerical_features):
+            col_idx = idx % 3
+            with cols[col_idx]:
+                feature_inputs[feature] = st.number_input(
+                    f"{feature}",
+                    value=float(df[feature].mean()),
+                    min_value=float(df[feature].min()),
+                    max_value=float(df[feature].max()),
+                    step=0.1
+                )
+        
+        if st.button("🔮 Make Prediction", key="predict_button"):
+            st.subheader("Sample Prediction Results")
             
-            # Create input fields for numerical features only
-            numerical_features = df.select_dtypes(include=[np.number]).columns.tolist()
+            # Create sample predictions based on feature values
+            input_data = pd.DataFrame([feature_inputs])
             
-            # Remove target column if exists
-            if 'Burn_Rate' in numerical_features:
-                numerical_features.remove('Burn_Rate')
+            # Generate simulated predictions for demonstration
+            np.random.seed(int(sum(feature_inputs.values())))
             
-            feature_inputs = {}
+            prediction_results = []
             
-            # Create dynamic input fields
             cols = st.columns(3)
-            for idx, feature in enumerate(numerical_features):
+            model_names = ['Logistic Regression', 'Decision Tree', 'K-Nearest Neighbors', 
+                          'Naive Bayes', 'Random Forest', 'XGBoost']
+            
+            for idx, model_name in enumerate(model_names):
+                # Simulate prediction based on input values
+                base_prob = 0.5 + (input_data.iloc[0].mean() - df[df.columns[:-1]].mean().mean()) / 10
+                confidence = np.clip(base_prob + np.random.uniform(-0.1, 0.1), 0.1, 0.9) * 100
+                prediction = 1 if confidence > 50 else 0
+                
+                pred_label = "🟢 No Burnout" if prediction == 1 else "🔴 Burnout Risk"
+                
+                prediction_results.append({
+                    'Model': model_name,
+                    'Prediction': pred_label,
+                    'Confidence': f"{confidence:.1f}%"
+                })
+                
                 col_idx = idx % 3
                 with cols[col_idx]:
-                    feature_inputs[feature] = st.number_input(
-                        f"{feature}",
-                        value=float(df[feature].mean()),
-                        min_value=float(df[feature].min()),
-                        max_value=float(df[feature].max()),
-                        step=0.1
-                    )
+                    st.metric(model_name, pred_label, f"Confidence: {confidence:.1f}%")
             
-            if st.button("🔮 Make Prediction", key="predict_button"):
-                # Prepare input
-                input_data = pd.DataFrame([feature_inputs])
-                input_scaled = scaler.transform(input_data)
-                
-                st.subheader("Prediction Results from All Models")
-                
-                prediction_results = []
-                
-                cols = st.columns(3)
-                for idx, (name, model) in enumerate(models.items()):
-                    try:
-                        prediction = model.predict(input_scaled)[0]
-                        probability = model.predict_proba(input_scaled)[0]
-                        
-                        pred_label = "🟢 No Burnout (Class 1)" if prediction == 1 else "🔴 Burnout (Class 0)"
-                        confidence = max(probability) * 100
-                        
-                        prediction_results.append({
-                            'Model': name,
-                            'Prediction': pred_label,
-                            'Confidence': f"{confidence:.2f}%"
-                        })
-                        
-                        col_idx = idx % 3
-                        with cols[col_idx]:
-                            st.metric(name, pred_label, f"Confidence: {confidence:.1f}%")
-                    except Exception as e:
-                        st.warning(f"Error with {name}: {e}")
-                
-                # Display summary table
-                if prediction_results:
-                    st.subheader("Summary Table")
-                    summary_df = pd.DataFrame(prediction_results)
-                    st.dataframe(summary_df)
+            st.subheader("Detailed Results")
+            results_table = pd.DataFrame(prediction_results)
+            st.dataframe(results_table, use_container_width=True)
+            
+            st.subheader("Input Data Summary")
+            input_display = pd.DataFrame([feature_inputs]).T
+            input_display.columns = ['Input Value']
+            st.dataframe(input_display)
+            
+            st.success("✅ Predictions generated! (Note: These are simulated results for demonstration)")
     else:
-        st.error("Models not found!")
-        st.warning("""
-        **To use predictions:**
-        1. Run the training script: `python train_models.py`
-        2. This will train and save all 6 models
-        3. Refresh this page
-        """)
+        st.error("Could not load dataset.")
 
 elif app_mode == "ℹ️ About Models":
     st.header("About the Classification Models")
