@@ -276,7 +276,14 @@ elif app_mode == "🎯 Make Predictions":
             input_data = pd.DataFrame([feature_inputs])
             
             # Generate simulated predictions for demonstration
-            np.random.seed(int(sum(feature_inputs.values())))
+            np.random.seed(int(sum(feature_inputs.values())) % 2147483647)
+            
+            # Calculate base probability from input data
+            input_mean = input_data.iloc[0].mean()
+            df_numeric = df.select_dtypes(include=[np.number])
+            if 'Burn_Rate' in df_numeric.columns:
+                df_numeric = df_numeric.drop('Burn_Rate', axis=1)
+            df_mean = df_numeric.mean().mean()
             
             prediction_results = []
             
@@ -286,8 +293,8 @@ elif app_mode == "🎯 Make Predictions":
             
             for idx, model_name in enumerate(model_names):
                 # Simulate prediction based on input values
-                base_prob = 0.5 + (input_data.iloc[0].mean() - df[df.columns[:-1]].mean().mean()) / 10
-                confidence = np.clip(base_prob + np.random.uniform(-0.1, 0.1), 0.1, 0.9) * 100
+                base_prob = 0.5 + (input_mean - df_mean) / (10 * df_mean) if df_mean != 0 else 0.5
+                confidence = np.clip(base_prob + np.random.uniform(-0.15, 0.15), 0.1, 0.9) * 100
                 prediction = 1 if confidence > 50 else 0
                 
                 pred_label = "🟢 No Burnout" if prediction == 1 else "🔴 Burnout Risk"
