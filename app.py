@@ -40,20 +40,44 @@ def load_and_prepare_data():
     """Load Work From Home Employee Burnout dataset from Kaggle"""
     try:
         import kagglehub
-        from kagglehub import KaggleDatasetAdapter
+        import glob
         
-        df = kagglehub.load_dataset(
-            KaggleDatasetAdapter.PANDAS,
-            "sonalshinde123/work-from-home-employee-burnout-dataset",
-            ""
+        # Load dataset and get the path
+        dataset_path = kagglehub.load_dataset(
+            "sonalshinde123/work-from-home-employee-burnout-dataset"
         )
-        return df
+        
+        # Find CSV files in the dataset path
+        csv_files = glob.glob(os.path.join(dataset_path, "*.csv"))
+        
+        if csv_files:
+            df = pd.read_csv(csv_files[0])
+            return df
+        else:
+            raise Exception("No CSV files found in the dataset")
+            
     except Exception as e:
-        st.warning(f"Could not load from Kaggle: {e}")
-        # Try loading from local cache if available
+        # Fallback: Try loading from local cache
         if os.path.exists("burnout_data.csv"):
             return pd.read_csv("burnout_data.csv")
-        return None
+        
+        # Fallback: Create sample dataset for demonstration
+        np.random.seed(42)
+        n_samples = 500
+        
+        df = pd.DataFrame({
+            'Employee_ID': range(1, n_samples + 1),
+            'Company_Type': np.random.choice(['Service', 'Product'], n_samples),
+            'WFH_Setup_Year': np.random.randint(2015, 2023, n_samples),
+            'Gender': np.random.choice(['Male', 'Female'], n_samples),
+            'Designation': np.random.choice(['Executive', 'Manager', 'Developer'], n_samples),
+            'Resource_Allocation': np.random.uniform(0.5, 1.0, n_samples),
+            'Mental_Fatigue_Score': np.random.randint(0, 10, n_samples),
+            'Burn_Rate': np.random.choice([0, 1], n_samples)
+        })
+        
+        st.info("📌 Using sample dataset for demonstration (Kaggle API unavailable)")
+        return df
 
 @st.cache_data
 def load_results():
