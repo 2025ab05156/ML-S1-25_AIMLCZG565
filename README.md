@@ -1,21 +1,20 @@
-# UCI Student Performance Classification
+# UCI Credit Approval Classification
 
 ## 📊 Project Overview
 
-This project implements and compares **6 different machine learning classification models** on the **UCI Student Performance Dataset**. It includes a fully interactive Streamlit web application for exploring data, evaluating models, and making predictions.
+This project implements and compares **6 different machine learning classification models** on the **UCI Credit Approval Dataset**. It includes a fully interactive Streamlit web application for exploring data, evaluating models, and making predictions.
 
-### Dataset: UCI Student Performance (ID: 320)
+### Dataset: UCI Credit Approval (ID: 27)
 
-**Source:** [UCI Machine Learning Repository - Student Performance Dataset](https://archive.ics.uci.edu/dataset/320/student+performance)
+**Source:** [UCI Machine Learning Repository - Credit Approval Dataset](https://archive.ics.uci.edu/dataset/27/credit+approval)
 
 **Dataset Characteristics:**
-- Student academic performance data from Portuguese schools
-- 33 features including demographic, social, and academic information
-- Target Variable: Final grade classification (Multiclass - 20 grades: 0-19)
-- Features: School, age, study time, past failures, family size, parent education, etc.
-- Total Samples: 649 students
-- No missing values
-- Mixed feature types: Numerical and categorical
+- Credit card application approval data
+- 15 features with mix of categorical and numerical attributes
+- Target Variable: Approval decision (Binary - Approved: 1, Denied: 0)
+- Total Samples: 690 applicants
+- Some missing values in features
+- Mixed feature types: Numerical (age, income, credit score) and categorical (employment type, marital status)
 
 ## 🤖 Classification Models Implemented
 
@@ -140,8 +139,8 @@ python train_models.py
 ```
 
 This script will:
-- Load the UCI Student Performance dataset from UCI ML Repository
-- Preprocess and prepare the data
+- Load the UCI Credit Approval dataset from UCI ML Repository
+- Preprocess and prepare the data (handle missing values, encode categorical features)
 - Train all 6 classification models
 - Calculate evaluation metrics for each model
 - Save trained models and results to the `model/` directory
