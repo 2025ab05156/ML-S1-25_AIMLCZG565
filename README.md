@@ -1,18 +1,21 @@
-# Work From Home Employee Burnout Classification
+# UCI Student Performance Classification
 
 ## 📊 Project Overview
 
-This project implements and compares **6 different machine learning classification models** on the **Work From Home Employee Burnout Dataset** from Kaggle. It includes a fully interactive Streamlit web application for exploring data, evaluating models, and making predictions.
+This project implements and compares **6 different machine learning classification models** on the **UCI Student Performance Dataset**. It includes a fully interactive Streamlit web application for exploring data, evaluating models, and making predictions.
 
-### Dataset: Work From Home Employee Burnout Classification
+### Dataset: UCI Student Performance (ID: 320)
 
-**Source:** [Kaggle - Work From Home Employee Burnout Dataset](https://www.kaggle.com/datasets/sonalshinde123/work-from-home-employee-burnout-dataset)
+**Source:** [UCI Machine Learning Repository - Student Performance Dataset](https://archive.ics.uci.edu/dataset/320/student+performance)
 
 **Dataset Characteristics:**
-- Real-world employee burnout data
-- Includes various work-life balance metrics
-- Target Variable: Burnout classification (Binary)
-- Multiple demographic and work-related features
+- Student academic performance data from Portuguese schools
+- 33 features including demographic, social, and academic information
+- Target Variable: Final grade classification (Multiclass - 20 grades: 0-19)
+- Features: School, age, study time, past failures, family size, parent education, etc.
+- Total Samples: 649 students
+- No missing values
+- Mixed feature types: Numerical and categorical
 
 ## 🤖 Classification Models Implemented
 
@@ -137,7 +140,7 @@ python train_models.py
 ```
 
 This script will:
-- Load the Work From Home Employee Burnout dataset from Kaggle
+- Load the UCI Student Performance dataset from UCI ML Repository
 - Preprocess and prepare the data
 - Train all 6 classification models
 - Calculate evaluation metrics for each model
@@ -158,7 +161,7 @@ The web app will open in your browser (typically http://localhost:8501)
 ### Application Features
 
 #### 📊 Dataset Overview
-- Load and explore the burnout dataset
+- Load and explore the student performance dataset
 - View dataset statistics and distributions
 - Analyze feature characteristics
 - Visualize numerical and categorical features
