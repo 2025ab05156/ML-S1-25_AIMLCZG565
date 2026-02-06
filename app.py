@@ -11,7 +11,7 @@ warnings.filterwarnings('ignore')
 
 # Set page config
 st.set_page_config(
-    page_title="ML Classification Models - Employee Burnout",
+    page_title="ML Classification Models - Student Performance Prediction",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -21,10 +21,10 @@ sns.set_style("whitegrid")
 plt.rcParams['figure.figsize'] = (10, 6)
 
 # Title and description
-st.title("🤖 Work From Home Employee Burnout Classification")
+st.title("📚 Student Performance Classification")
 st.markdown("""
     ### Interactive Machine Learning Classification System
-    Demonstrating 6 different classification models on the Work From Home Employee Burnout Dataset
+    Demonstrating 6 different classification models on the UCI Student Performance Dataset
     """)
 st.markdown("---")
 
@@ -37,46 +37,44 @@ app_mode = st.sidebar.radio(
 
 @st.cache_data
 def load_and_prepare_data():
-    """Load Work From Home Employee Burnout dataset from Kaggle"""
+    """Load Student Performance dataset from UCI ML Repository"""
     try:
-        import kagglehub
-        import glob
+        from ucimlrepo import fetch_ucirepo
         
-        # Load dataset and get the path
-        dataset_path = kagglehub.load_dataset(
-            "sonalshinde123/work-from-home-employee-burnout-dataset"
-        )
+        # Fetch dataset
+        student_performance = fetch_ucirepo(id=320)
         
-        # Find CSV files in the dataset path
-        csv_files = glob.glob(os.path.join(dataset_path, "*.csv"))
+        # Get data as pandas dataframes
+        X = student_performance.data.features
+        y = student_performance.data.targets
         
-        if csv_files:
-            df = pd.read_csv(csv_files[0])
-            return df
-        else:
-            raise Exception("No CSV files found in the dataset")
+        # Combine features and target
+        df = pd.concat([X, y], axis=1)
+        
+        return df
             
     except Exception as e:
         # Fallback: Try loading from local cache
-        if os.path.exists("burnout_data.csv"):
-            return pd.read_csv("burnout_data.csv")
+        if os.path.exists("student_performance.csv"):
+            return pd.read_csv("student_performance.csv")
         
         # Fallback: Create sample dataset for demonstration
         np.random.seed(42)
         n_samples = 500
         
         df = pd.DataFrame({
-            'Employee_ID': range(1, n_samples + 1),
-            'Company_Type': np.random.choice(['Service', 'Product'], n_samples),
-            'WFH_Setup_Year': np.random.randint(2015, 2023, n_samples),
-            'Gender': np.random.choice(['Male', 'Female'], n_samples),
-            'Designation': np.random.choice(['Executive', 'Manager', 'Developer'], n_samples),
-            'Resource_Allocation': np.random.uniform(0.5, 1.0, n_samples),
-            'Mental_Fatigue_Score': np.random.randint(0, 10, n_samples),
-            'Burn_Rate': np.random.choice([0, 1], n_samples)
+            'Student_ID': range(1, n_samples + 1),
+            'Age': np.random.randint(18, 26, n_samples),
+            'Study_Hours': np.random.uniform(0, 10, n_samples),
+            'Previous_Score': np.random.uniform(0, 100, n_samples),
+            'Attendance': np.random.uniform(50, 100, n_samples),
+            'Sleep_Duration': np.random.uniform(4, 10, n_samples),
+            'Physical_Activity': np.random.uniform(0, 2, n_samples),
+            'Alcohol_Consumption': np.random.choice([0, 1], n_samples),
+            'Performance_Score': np.random.uniform(0, 100, n_samples)
         })
         
-        st.info("📌 Using sample dataset for demonstration (Kaggle API unavailable)")
+        st.info("📌 Using sample student performance dataset for demonstration (UCI Repository unavailable)")
         return df
 
 @st.cache_data
@@ -366,20 +364,20 @@ elif app_mode == "📈 Model Comparison":
 elif app_mode == "🎯 Make Predictions":
     st.header("Make Predictions on New Data")
     
-    st.info("💡 This section demonstrates how predictions would work with trained models. View model performance in the 'Model Comparison' section.")
+    st.info("💡 This section demonstrates how predictions would work with trained models. Input student metrics to predict performance category.")
     
     df = load_and_prepare_data()
     
     if df is not None:
-        st.subheader("Input Features for Prediction")
-        st.write("Adjust the feature values below to see how they would be used for predictions:")
+        st.subheader("Student Performance Prediction")
+        st.write("Adjust the student metrics below to predict performance category:")
         
         # Create input fields for numerical features only
         numerical_features = df.select_dtypes(include=[np.number]).columns.tolist()
         
-        # Remove target column if exists
-        if 'Burn_Rate' in numerical_features:
-            numerical_features.remove('Burn_Rate')
+        # Remove ID and target columns if exists
+        cols_to_remove = ['Student_ID', 'ID', 'Performance_Score', 'Target', 'Class']
+        numerical_features = [col for col in numerical_features if col not in cols_to_remove]
         
         feature_inputs = {}
         
@@ -396,8 +394,8 @@ elif app_mode == "🎯 Make Predictions":
                     step=0.1
                 )
         
-        if st.button("🔮 Make Prediction", key="predict_button"):
-            st.subheader("Sample Prediction Results")
+        if st.button("🔮 Predict Performance", key="predict_button"):
+            st.subheader("Performance Prediction Results")
             
             # Create sample predictions based on feature values
             input_data = pd.DataFrame([feature_inputs])
@@ -408,8 +406,8 @@ elif app_mode == "🎯 Make Predictions":
             # Calculate base probability from input data
             input_mean = input_data.iloc[0].mean()
             df_numeric = df.select_dtypes(include=[np.number])
-            if 'Burn_Rate' in df_numeric.columns:
-                df_numeric = df_numeric.drop('Burn_Rate', axis=1)
+            cols_to_remove = ['Student_ID', 'ID', 'Performance_Score', 'Target', 'Class']
+            df_numeric = df_numeric[[col for col in df_numeric.columns if col not in cols_to_remove]]
             df_mean = df_numeric.mean().mean()
             
             prediction_results = []
@@ -424,7 +422,7 @@ elif app_mode == "🎯 Make Predictions":
                 confidence = np.clip(base_prob + np.random.uniform(-0.15, 0.15), 0.1, 0.9) * 100
                 prediction = 1 if confidence > 50 else 0
                 
-                pred_label = "🟢 No Burnout" if prediction == 1 else "🔴 Burnout Risk"
+                pred_label = "⭐ High Performance" if prediction == 1 else "📊 Standard Performance"
                 
                 prediction_results.append({
                     'Model': model_name,
@@ -440,9 +438,9 @@ elif app_mode == "🎯 Make Predictions":
             results_table = pd.DataFrame(prediction_results)
             st.dataframe(results_table, use_container_width=True)
             
-            st.subheader("Input Data Summary")
+            st.subheader("Input Student Metrics")
             input_display = pd.DataFrame([feature_inputs]).T
-            input_display.columns = ['Input Value']
+            input_display.columns = ['Value']
             st.dataframe(input_display)
             
             st.success("✅ Predictions generated! (Note: These are simulated results for demonstration)")
@@ -525,11 +523,12 @@ elif app_mode == "ℹ️ About Models":
     st.markdown("---")
     st.subheader("Dataset Information")
     st.write("""
-    **Work From Home Employee Burnout Dataset**
-    - Source: Kaggle (sonalshinde123/work-from-home-employee-burnout-dataset)
-    - Target: Burn_Rate (burnout classification)
-    - Features: Various employee characteristics and work metrics
-    - Use Case: Predicting employee burnout risk for WFH employees
+    **UCI Student Performance Dataset**
+    - Source: UCI Machine Learning Repository (ID: 320)
+    - Target: Student Performance Classification
+    - Features: Student demographics, study habits, sleep patterns, physical activity, substance use, and academic metrics
+    - Use Case: Predicting student academic performance levels based on lifestyle and academic behaviors
+    - Dataset Size: Comprehensive student performance metrics with multiple predictor variables
     """)
     
     st.subheader("How to Use This App")
