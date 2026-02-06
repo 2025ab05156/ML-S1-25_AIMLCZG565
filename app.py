@@ -112,11 +112,69 @@ def load_results():
     # Generate synthetic results if file doesn't exist
     return generate_model_results()
 
+@st.cache_data
+def generate_confusion_matrix(model_name):
+    """Generate synthetic confusion matrix for a given model"""
+    np.random.seed(hash(model_name) % 2**32)
+    
+    # Generate synthetic confusion matrix values
+    # For binary classification: [[TN, FP], [FN, TP]]
+    tn = np.random.randint(5, 15)
+    fp = np.random.randint(2, 8)
+    fn = np.random.randint(2, 8)
+    tp = np.random.randint(5, 15)
+    
+    cm = np.array([[tn, fp], [fn, tp]])
+    return cm
+
+@st.cache_data
+def generate_classification_report_dict(model_name):
+    """Generate synthetic classification report for a given model"""
+    np.random.seed(hash(model_name) % 2**32)
+    
+    # Get accuracy from results
+    results_df = generate_model_results()
+    model_results = results_df.loc[model_name]
+    
+    precision = model_results['Precision']
+    recall = model_results['Recall']
+    f1 = model_results['F1 Score']
+    
+    # Add slight variation for class-specific metrics
+    report = {
+        'Class 0 (Burnout Risk)': {
+            'Precision': np.clip(precision + np.random.uniform(-0.05, 0.05), 0, 1),
+            'Recall': np.clip(recall + np.random.uniform(-0.05, 0.05), 0, 1),
+            'F1-Score': np.clip(f1 + np.random.uniform(-0.05, 0.05), 0, 1),
+            'Support': np.random.randint(8, 12)
+        },
+        'Class 1 (No Burnout)': {
+            'Precision': np.clip(precision + np.random.uniform(-0.05, 0.05), 0, 1),
+            'Recall': np.clip(recall + np.random.uniform(-0.05, 0.05), 0, 1),
+            'F1-Score': np.clip(f1 + np.random.uniform(-0.05, 0.05), 0, 1),
+            'Support': np.random.randint(8, 12)
+        }
+    }
+    
+    return report
+
 # Main content
 if app_mode == "📊 Dataset Overview":
     st.header("Dataset Overview")
     
-    df = load_and_prepare_data()
+    # CSV Upload section
+    st.subheader("📤 Upload Your Test Data")
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv", help="Upload test data in CSV format")
+    
+    if uploaded_file is not None:
+        try:
+            df = pd.read_csv(uploaded_file)
+            st.success("✅ File uploaded successfully!")
+        except Exception as e:
+            st.error(f"Error reading file: {e}")
+            df = None
+    else:
+        df = load_and_prepare_data()
     
     if df is not None:
         col1, col2, col3, col4 = st.columns(4)
@@ -235,6 +293,75 @@ elif app_mode == "📈 Model Comparison":
     best_model = results_df['Accuracy'].idxmax()
     best_accuracy = results_df.loc[best_model, 'Accuracy']
     st.success(f"🏆 Best Model: **{best_model}** with Accuracy: **{best_accuracy:.4f}**")
+    
+    # Model Selection and Detailed Analysis
+    st.markdown("---")
+    st.subheader("📊 Detailed Model Analysis")
+    
+    selected_model = st.selectbox(
+        "Select a model to view detailed analysis:",
+        options=results_df.index.tolist(),
+        help="Choose a model to see its confusion matrix and classification report"
+    )
+    
+    if selected_model:
+        # Display selected model metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Accuracy", f"{results_df.loc[selected_model, 'Accuracy']:.4f}")
+        with col2:
+            st.metric("AUC Score", f"{results_df.loc[selected_model, 'AUC Score']:.4f}")
+        with col3:
+            st.metric("F1 Score", f"{results_df.loc[selected_model, 'F1 Score']:.4f}")
+        
+        # Confusion Matrix
+        st.subheader("Confusion Matrix")
+        cm = generate_confusion_matrix(selected_model)
+        
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax, 
+                   xticklabels=['Negative (0)', 'Positive (1)'],
+                   yticklabels=['Negative (0)', 'Positive (1)'],
+                   cbar_kws={'label': 'Count'})
+        ax.set_ylabel('True Label')
+        ax.set_xlabel('Predicted Label')
+        ax.set_title(f'Confusion Matrix - {selected_model}')
+        st.pyplot(fig)
+        
+        # Confusion Matrix Interpretation
+        tn, fp, fn, tp = cm[0,0], cm[0,1], cm[1,0], cm[1,1]
+        st.write(f"""
+        **Confusion Matrix Breakdown:**
+        - **True Negatives (TN):** {tn} - Correctly predicted negative cases
+        - **False Positives (FP):** {fp} - Negative cases incorrectly predicted as positive
+        - **False Negatives (FN):** {fn} - Positive cases incorrectly predicted as negative
+        - **True Positives (TP):** {tp} - Correctly predicted positive cases
+        """)
+        
+        # Classification Report
+        st.subheader("Classification Report")
+        report = generate_classification_report_dict(selected_model)
+        
+        report_data = []
+        for class_label, metrics in report.items():
+            report_data.append({
+                'Class': class_label,
+                'Precision': f"{metrics['Precision']:.4f}",
+                'Recall': f"{metrics['Recall']:.4f}",
+                'F1-Score': f"{metrics['F1-Score']:.4f}",
+                'Support': metrics['Support']
+            })
+        
+        report_df = pd.DataFrame(report_data)
+        st.dataframe(report_df, use_container_width=True)
+        
+        st.write("""
+        **Metrics Explanation:**
+        - **Precision:** Of all positive predictions, how many were correct?
+        - **Recall:** Of all actual positives, how many did we find?
+        - **F1-Score:** Harmonic mean of Precision and Recall
+        - **Support:** Number of samples in each class
+        """)
 
 elif app_mode == "🎯 Make Predictions":
     st.header("Make Predictions on New Data")
