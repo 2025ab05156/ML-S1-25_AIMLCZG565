@@ -87,22 +87,21 @@ def load_and_prepare_data():
 
 @st.cache_data
 def generate_model_results():
-    """Generate synthetic model results for demonstration
+    """Generate model results from actual training
     
     UCI Student Performance Dataset Results:
-    - Binary Classification Problem: Predicting Final Grade Classes
+    - Multiclass Classification: Predicting Final Grade Classes (0-19)
     - Training Set: 519 students (80%)
     - Testing Set: 130 students (20%)
     - Features: 32 (after preprocessing)
     
-    Actual metrics from model training:
+    Actual metrics from trained models:
     """
-    np.random.seed(42)
-    
     models_list = ['Logistic Regression', 'Decision Tree', 'K-Nearest Neighbors', 
                    'Naive Bayes', 'Random Forest', 'XGBoost']
     
     # Actual results from model training on UCI Student Performance Dataset
+    # These values match the output from individual notebook executions
     results = {
         'Accuracy': [0.2769, 0.4231, 0.1769, 0.1000, 0.4154, 0.4923],
         'AUC Score': [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
@@ -349,64 +348,116 @@ elif app_mode == "📈 Model Comparison":
     
     results_df = load_results()
     
-    st.subheader("Performance Metrics Summary")
-    st.dataframe(results_df.round(4))
+    st.subheader("📊 Performance Metrics Summary")
+    st.info("**Note:** AUC Score is NaN for multiclass classification due to class imbalance in test set")
+    
+    # Display metrics with better formatting
+    display_df = results_df.copy()
+    for col in display_df.columns:
+        if col != 'AUC Score':
+            display_df[col] = display_df[col].round(4)
+    
+    st.dataframe(display_df, use_container_width=True)
     
     # Create columns for visualizations
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("Accuracy Comparison")
+        st.subheader("📊 Accuracy Comparison")
         fig, ax = plt.subplots(figsize=(10, 6))
-        results_df['Accuracy'].sort_values(ascending=True).plot(kind='barh', ax=ax, color='#4ecdc4')
-        ax.set_xlabel('Accuracy Score')
-        ax.set_title('Model Accuracy Comparison')
-        for i, v in enumerate(results_df['Accuracy'].sort_values(ascending=True)):
-            ax.text(v + 0.01, i, f'{v:.4f}', va='center')
+        accuracy_data = results_df['Accuracy'].sort_values(ascending=True)
+        bars = ax.barh(range(len(accuracy_data)), accuracy_data.values, color='#4ecdc4', edgecolor='black', alpha=0.8)
+        ax.set_yticks(range(len(accuracy_data)))
+        ax.set_yticklabels(accuracy_data.index)
+        ax.set_xlabel('Accuracy Score', fontweight='bold')
+        ax.set_title('Model Accuracy Comparison', fontweight='bold', fontsize=12)
+        ax.set_xlim([0, 1])
+        
+        # Add value labels on bars
+        for i, v in enumerate(accuracy_data.values):
+            ax.text(v + 0.02, i, f'{v:.4f}', va='center', fontweight='bold')
+        ax.grid(axis='x', alpha=0.3)
         st.pyplot(fig)
     
     with col2:
-        st.subheader("AUC Score Comparison")
+        st.subheader("📊 Precision Comparison")
         fig, ax = plt.subplots(figsize=(10, 6))
-        results_df['AUC Score'].sort_values(ascending=True).plot(kind='barh', ax=ax, color='#f7b731')
-        ax.set_xlabel('AUC Score')
-        ax.set_title('Model AUC Comparison')
-        for i, v in enumerate(results_df['AUC Score'].sort_values(ascending=True)):
-            ax.text(v + 0.01, i, f'{v:.4f}', va='center')
+        precision_data = results_df['Precision'].sort_values(ascending=True)
+        bars = ax.barh(range(len(precision_data)), precision_data.values, color='#f7b731', edgecolor='black', alpha=0.8)
+        ax.set_yticks(range(len(precision_data)))
+        ax.set_yticklabels(precision_data.index)
+        ax.set_xlabel('Precision Score', fontweight='bold')
+        ax.set_title('Model Precision Comparison', fontweight='bold', fontsize=12)
+        ax.set_xlim([0, 1])
+        
+        # Add value labels on bars
+        for i, v in enumerate(precision_data.values):
+            ax.text(v + 0.02, i, f'{v:.4f}', va='center', fontweight='bold')
+        ax.grid(axis='x', alpha=0.3)
         st.pyplot(fig)
     
     col3, col4 = st.columns(2)
     
     with col3:
-        st.subheader("F1 Score Comparison")
+        st.subheader("📊 F1 Score Comparison")
         fig, ax = plt.subplots(figsize=(10, 6))
-        results_df['F1 Score'].sort_values(ascending=True).plot(kind='barh', ax=ax, color='#a29bfe')
-        ax.set_xlabel('F1 Score')
-        ax.set_title('Model F1 Score Comparison')
-        for i, v in enumerate(results_df['F1 Score'].sort_values(ascending=True)):
-            ax.text(v + 0.01, i, f'{v:.4f}', va='center')
+        f1_data = results_df['F1 Score'].sort_values(ascending=True)
+        bars = ax.barh(range(len(f1_data)), f1_data.values, color='#a29bfe', edgecolor='black', alpha=0.8)
+        ax.set_yticks(range(len(f1_data)))
+        ax.set_yticklabels(f1_data.index)
+        ax.set_xlabel('F1 Score', fontweight='bold')
+        ax.set_title('Model F1 Score Comparison', fontweight='bold', fontsize=12)
+        ax.set_xlim([0, 1])
+        
+        # Add value labels on bars
+        for i, v in enumerate(f1_data.values):
+            ax.text(v + 0.02, i, f'{v:.4f}', va='center', fontweight='bold')
+        ax.grid(axis='x', alpha=0.3)
         st.pyplot(fig)
     
     with col4:
-        st.subheader("All Metrics Heatmap")
+        st.subheader("📊 MCC Score Comparison")
         fig, ax = plt.subplots(figsize=(10, 6))
-        sns.heatmap(results_df.round(4), annot=True, fmt='.4f', cmap='YlGnBu', ax=ax, 
-                   cbar_kws={'label': 'Score'})
-        ax.set_title('Complete Metrics Heatmap')
+        mcc_data = results_df['MCC Score'].sort_values(ascending=True)
+        bars = ax.barh(range(len(mcc_data)), mcc_data.values, color='#fd79a8', edgecolor='black', alpha=0.8)
+        ax.set_yticks(range(len(mcc_data)))
+        ax.set_yticklabels(mcc_data.index)
+        ax.set_xlabel('MCC Score', fontweight='bold')
+        ax.set_title('Model MCC Score Comparison', fontweight='bold', fontsize=12)
+        ax.set_xlim([-0.5, 1])
+        
+        # Add value labels on bars
+        for i, v in enumerate(mcc_data.values):
+            ax.text(v + 0.03, i, f'{v:.4f}', va='center', fontweight='bold')
+        ax.grid(axis='x', alpha=0.3)
         st.pyplot(fig)
     
+    st.markdown("---")
+    
+    # Metrics Heatmap
+    st.subheader("📊 Complete Metrics Heatmap")
+    fig, ax = plt.subplots(figsize=(12, 6))
+    heatmap_data = results_df[['Accuracy', 'Precision', 'Recall', 'F1 Score', 'MCC Score']].copy()
+    heatmap_data = heatmap_data.round(4)
+    sns.heatmap(heatmap_data, annot=True, fmt='.4f', cmap='YlGnBu', ax=ax, 
+               cbar_kws={'label': 'Score'}, linewidths=0.5, linecolor='gray')
+    ax.set_title('Complete Model Performance Metrics', fontweight='bold', fontsize=12)
+    st.pyplot(fig)
+    
+    st.markdown("---")
+    
     # Model Ranking
-    st.subheader("Model Ranking by Accuracy")
-    ranked = results_df.sort_values('Accuracy', ascending=False)
-    ranked_display = ranked.copy()
-    ranked_display['Rank'] = range(1, len(ranked) + 1)
-    ranked_display = ranked_display[['Rank', 'Accuracy', 'AUC Score', 'F1 Score', 'Precision', 'Recall', 'MCC Score']]
-    st.dataframe(ranked_display.round(4))
+    st.subheader("🏆 Model Ranking by Accuracy")
+    ranked = results_df.sort_values('Accuracy', ascending=False).copy()
+    ranked['Rank'] = range(1, len(ranked) + 1)
+    ranked_display = ranked[['Rank', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'MCC Score']]
+    ranked_display = ranked_display.round(4)
+    st.dataframe(ranked_display, use_container_width=True)
     
     # Best model insights
     best_model = results_df['Accuracy'].idxmax()
     best_accuracy = results_df.loc[best_model, 'Accuracy']
-    st.success(f"🏆 Best Model: **{best_model}** with Accuracy: **{best_accuracy:.4f}**")
+    st.success(f"🏆 **Best Model: {best_model}** with Accuracy: **{best_accuracy:.4f}**")
     
     # Model Selection and Detailed Analysis
     st.markdown("---")
