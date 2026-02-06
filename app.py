@@ -94,6 +94,8 @@ def generate_model_results():
     - Training Set: 519 students (80%)
     - Testing Set: 130 students (20%)
     - Features: 32 (after preprocessing)
+    
+    Actual metrics from model training:
     """
     np.random.seed(42)
     
@@ -102,12 +104,12 @@ def generate_model_results():
     
     # Actual results from model training on UCI Student Performance Dataset
     results = {
-        'Accuracy': [0.2769, 0.3500, 0.1769, 0.45, 0.4154, 0.4923],
-        'AUC Score': [np.nan, 0.5076, np.nan, np.nan, np.nan, np.nan],
-        'Precision': [0.2769, 0.3500, 0.1747, 0.44, 0.3920, 0.4718],
-        'Recall': [0.2769, 0.3500, 0.1769, 0.45, 0.4154, 0.4923],
-        'F1 Score': [0.2766, 0.3473, 0.1747, 0.44, 0.3920, 0.4754],
-        'MCC Score': [np.nan, np.nan, np.nan, np.nan, np.nan, 0.4327]
+        'Accuracy': [0.2769, 0.4231, 0.1769, 0.1000, 0.4154, 0.4923],
+        'AUC Score': [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+        'Precision': [0.2979, 0.4532, 0.2163, 0.3048, 0.4183, 0.4718],
+        'Recall': [0.2769, 0.4231, 0.1769, 0.1000, 0.4154, 0.4923],
+        'F1 Score': [0.2766, 0.4257, 0.1747, 0.0911, 0.3920, 0.4754],
+        'MCC Score': [0.1963, 0.3596, 0.0768, 0.0678, 0.3460, 0.4327]
     }
     
     results_df = pd.DataFrame(results, index=models_list)
@@ -184,65 +186,163 @@ if app_mode == "📊 Dataset Overview":
         try:
             df = pd.read_csv(uploaded_file)
             st.success("✅ File uploaded successfully!")
+            st.info(f"📊 Displaying statistics from uploaded file: {uploaded_file.name}")
         except Exception as e:
             st.error(f"Error reading file: {e}")
             df = None
     else:
         df = load_and_prepare_data()
+        st.info("📌 Displaying UCI Student Performance Dataset (default)")
     
     if df is not None:
+        # Display basic metrics
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Total Samples", len(df))
         with col2:
             st.metric("Number of Features", len(df.columns))
         with col3:
-            st.metric("Missing Values", df.isnull().sum().sum())
+            missing_total = df.isnull().sum().sum()
+            st.metric("Missing Values", missing_total)
         with col4:
             st.metric("Data Shape", f"{df.shape[0]} × {df.shape[1]}")
         
-        st.subheader("Dataset Statistics")
-        st.dataframe(df.describe().T)
+        st.markdown("---")
         
-        st.subheader("First Few Rows")
-        st.dataframe(df.head(10))
+        # Dataset Statistics for numerical columns
+        st.subheader("📊 Dataset Statistics (Numerical Columns)")
+        numerical_df = df.select_dtypes(include=[np.number])
+        if len(numerical_df.columns) > 0:
+            stats_display = numerical_df.describe().T
+            stats_display = stats_display.round(4)
+            st.dataframe(stats_display, use_container_width=True)
+        else:
+            st.info("No numerical columns found in the dataset.")
         
-        st.subheader("Data Types")
-        st.dataframe(df.dtypes)
+        # Display all data types
+        st.subheader("📋 Column Data Types")
+        dtype_df = pd.DataFrame({
+            'Column': df.columns,
+            'Data Type': df.dtypes,
+            'Non-Null Count': df.count(),
+            'Null Count': df.isnull().sum()
+        })
+        st.dataframe(dtype_df, use_container_width=True)
         
-        st.subheader("Missing Values")
-        missing_df = pd.DataFrame({
+        # First few rows
+        st.subheader("🔍 Dataset Preview (First 10 Rows)")
+        st.dataframe(df.head(10), use_container_width=True)
+        
+        # Missing Values Analysis
+        st.subheader("⚠️ Missing Values Analysis")
+        missing_data = pd.DataFrame({
             'Column': df.columns,
             'Missing Count': df.isnull().sum(),
             'Missing Percentage': (df.isnull().sum() / len(df) * 100).round(2)
         })
-        st.dataframe(missing_df[missing_df['Missing Count'] > 0])
+        missing_data = missing_data[missing_data['Missing Count'] > 0].sort_values('Missing Count', ascending=False)
+        
+        if len(missing_data) > 0:
+            st.dataframe(missing_data, use_container_width=True)
+        else:
+            st.success("✅ No missing values found in the dataset!")
+        
+        st.markdown("---")
         
         # Visualizations
+        st.subheader("📈 Data Visualizations")
+        
+        col1, col2 = st.columns(2)
+        
+        # Numerical Features Distribution
+        with col1:
+            st.write("**Numerical Features Distribution**")
+            numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+            
+            if len(numerical_cols) > 0:
+                selected_num_col = st.selectbox("Select a numerical column to visualize:", numerical_cols, key="num_viz")
+                
+                if selected_num_col:
+                    fig, ax = plt.subplots(figsize=(8, 5))
+                    ax.hist(df[selected_num_col].dropna(), bins=30, color='#4ecdc4', edgecolor='black', alpha=0.7)
+                    ax.set_title(f'Distribution of {selected_num_col}', fontsize=14, fontweight='bold')
+                    ax.set_xlabel(selected_num_col)
+                    ax.set_ylabel('Frequency')
+                    ax.grid(axis='y', alpha=0.3)
+                    st.pyplot(fig)
+            else:
+                st.info("No numerical columns available for visualization.")
+        
+        # Categorical Features
+        with col2:
+            st.write("**Categorical Features Distribution**")
+            categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+            
+            if len(categorical_cols) > 0:
+                selected_cat_col = st.selectbox("Select a categorical column to visualize:", categorical_cols, key="cat_viz")
+                
+                if selected_cat_col:
+                    value_counts = df[selected_cat_col].value_counts()
+                    
+                    if len(value_counts) > 20:
+                        st.warning(f"⚠️ {selected_cat_col} has {len(value_counts)} unique values. Showing top 20.")
+                        value_counts = value_counts.head(20)
+                    
+                    fig, ax = plt.subplots(figsize=(8, 5))
+                    value_counts.plot(kind='bar', ax=ax, color='#f7b731', alpha=0.7, edgecolor='black')
+                    ax.set_title(f'Distribution of {selected_cat_col}', fontsize=14, fontweight='bold')
+                    ax.set_xlabel(selected_cat_col)
+                    ax.set_ylabel('Frequency')
+                    plt.xticks(rotation=45, ha='right')
+                    ax.grid(axis='y', alpha=0.3)
+                    st.pyplot(fig)
+            else:
+                st.info("No categorical columns available for visualization.")
+        
+        st.markdown("---")
+        
+        # Advanced Statistics
+        st.subheader("📊 Advanced Statistics")
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("Numerical Features Distribution")
-            numerical_cols = df.select_dtypes(include=[np.number]).columns[:3]
-            for col in numerical_cols:
-                fig, ax = plt.subplots()
-                ax.hist(df[col], bins=30, color='#4ecdc4', edgecolor='black')
-                ax.set_title(f'Distribution of {col}')
-                ax.set_xlabel(col)
-                ax.set_ylabel('Frequency')
+            st.write("**Correlation Matrix** (Numerical Columns Only)")
+            numerical_df = df.select_dtypes(include=[np.number])
+            if len(numerical_df.columns) > 1:
+                corr_matrix = numerical_df.corr()
+                fig, ax = plt.subplots(figsize=(8, 6))
+                sns.heatmap(corr_matrix, annot=False, cmap='coolwarm', center=0, ax=ax, 
+                           cbar_kws={'label': 'Correlation'}, square=True)
+                ax.set_title('Correlation Matrix')
                 st.pyplot(fig)
+            else:
+                st.info("Need at least 2 numerical columns for correlation analysis.")
         
         with col2:
-            st.subheader("Categorical Features")
-            categorical_cols = df.select_dtypes(include=['object']).columns[:3]
-            if len(categorical_cols) > 0:
-                for col in categorical_cols:
-                    fig, ax = plt.subplots()
-                    df[col].value_counts().plot(kind='bar', ax=ax, color='#f7b731')
-                    ax.set_title(f'Distribution of {col}')
-                    st.pyplot(fig)
+            st.write("**Summary Statistics**")
+            if len(numerical_cols) > 0:
+                selected_summary_col = st.selectbox("Select column for detailed statistics:", numerical_cols, key="summary_stats")
+                
+                summary_stats = {
+                    'Mean': df[selected_summary_col].mean(),
+                    'Median': df[selected_summary_col].median(),
+                    'Std Dev': df[selected_summary_col].std(),
+                    'Min': df[selected_summary_col].min(),
+                    'Q1 (25%)': df[selected_summary_col].quantile(0.25),
+                    'Q3 (75%)': df[selected_summary_col].quantile(0.75),
+                    'Max': df[selected_summary_col].max(),
+                    'Skewness': df[selected_summary_col].skew(),
+                    'Kurtosis': df[selected_summary_col].kurtosis()
+                }
+                
+                summary_df = pd.DataFrame(summary_stats.items(), columns=['Statistic', 'Value'])
+                summary_df['Value'] = summary_df['Value'].round(4)
+                st.dataframe(summary_df, use_container_width=True)
+            else:
+                st.info("No numerical columns available.")
     else:
-        st.error("Could not load dataset. Please ensure you have kagglehub installed.")
+        st.error("Could not load dataset. Please ensure you have ucimlrepo installed.")
 
 elif app_mode == "📈 Model Comparison":
     st.header("Model Performance Comparison")
