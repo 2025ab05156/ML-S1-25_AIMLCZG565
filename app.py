@@ -114,7 +114,6 @@ def generate_model_results():
     results_df = pd.DataFrame(results, index=models_list)
     return results_df
 
-@st.cache_data
 def load_results():
     """Load pre-computed model results or generate synthetic ones"""
     try:
@@ -125,6 +124,7 @@ def load_results():
         pass
     
     # Generate synthetic results if file doesn't exist
+    # Always use fresh data from generate_model_results()
     return generate_model_results()
 
 @st.cache_data
